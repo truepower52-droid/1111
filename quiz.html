@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Квиз для школьников 🎓</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 24px;
+      padding: 36px 32px;
+      max-width: 540px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+
+    /* Progress */
+    .progress-bar {
+      background: #eee;
+      border-radius: 99px;
+      height: 8px;
+      margin-bottom: 28px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+
+    .question-counter {
+      font-size: 13px;
+      color: #999;
+      margin-bottom: 10px;
+      text-align: right;
+    }
+
+    /* Question */
+    .question-text {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 24px;
+      line-height: 1.4;
+    }
+
+    /* Options */
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .option-btn {
+      background: #f5f5fa;
+      border: 2px solid #e8e8f0;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 16px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #333;
+    }
+    .option-btn:hover:not(:disabled) {
+      border-color: #667eea;
+      background: #f0f0ff;
+      transform: translateX(4px);
+    }
+    .option-btn .letter {
+      background: #e8e8f0;
+      border-radius: 8px;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    /* Real-time feedback */
+    .option-btn.correct {
+      background: #e6fbf0;
+      border-color: #22c55e;
+      color: #166534;
+    }
+    .option-btn.correct .letter { background: #22c55e; color: #fff; }
+
+    .option-btn.wrong {
+      background: #fff1f0;
+      border-color: #ef4444;
+      color: #991b1b;
+    }
+    .option-btn.wrong .letter { background: #ef4444; color: #fff; }
+
+    .option-btn:disabled { cursor: default; }
+
+    /* Feedback message */
+    .feedback {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      display: none;
+      animation: popIn 0.3s ease;
+    }
+    .feedback.show { display: block; }
+    .feedback.correct-msg { background: #e6fbf0; color: #166534; }
+    .feedback.wrong-msg  { background: #fff1f0; color: #991b1b; }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* Next button */
+    .next-btn {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: none;
+      transition: opacity 0.2s;
+    }
+    .next-btn:hover { opacity: 0.9; }
+    .next-btn.show { display: block; }
+
+    /* Result screen */
+    .result {
+      display: none;
+      text-align: center;
+      animation: popIn 0.4s ease;
+    }
+    .result.show { display: block; }
+
+    .result-emoji { font-size: 64px; margin-bottom: 12px; }
+    .result-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: #1a1a2e;
+      margin-bottom: 8px;
+    }
+    .result-score {
+      font-size: 52px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 8px 0;
+    }
+    .result-sub {
+      font-size: 15px;
+      color: #888;
+      margin-bottom: 28px;
+    }
+    .restart-btn {
+      padding: 14px 32px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .restart-btn:hover { opacity: 0.9; }
+
+    .quiz-screen { }
+  </style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- Quiz screen -->
+  <div class="quiz-screen" id="quizScreen">
+    <div class="question-counter" id="counter">Вопрос 1 из 5</div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 20%"></div>
+    </div>
+    <div class="question-text" id="questionText"></div>
+    <div class="options" id="options"></div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Следующий вопрос →</button>
+  </div>
+
+  <!-- Result screen -->
+  <div class="result" id="resultScreen">
+    <div class="result-emoji" id="resultEmoji"></div>
+    <div class="result-title" id="resultTitle"></div>
+    <div class="result-score" id="resultScore"></div>
+    <div class="result-sub" id="resultSub"></div>
+    <button class="restart-btn" onclick="restart()">Пройти ещё раз 🔄</button>
+  </div>
+
+</div>
+
+<script>
+  const questions = [
+    {
+      question: "Какая планета является самой большой в Солнечной системе?",
+      options: ["Сатурн", "Нептун", "Юпитер", "Уран"],
+      correct: 2,
+      explanation: "Юпитер — самая большая планета, её масса больше массы всех остальных планет вместе взятых!"
+    },
+    {
+      question: "Сколько сторон у правильного шестиугольника?",
+      options: ["4", "5", "7", "6"],
+      correct: 3,
+      explanation: "У шестиугольника ровно 6 сторон. Именно такую форму имеют соты пчёл!"
+    },
+    {
+      question: "Какой газ растения поглощают из воздуха в процессе фотосинтеза?",
+      options: ["Кислород", "Азот", "Углекислый газ", "Водород"],
+      correct: 2,
+      explanation: "Растения поглощают углекислый газ (CO₂) и выделяют кислород — вот почему леса называют лёгкими планеты!"
+    },
+    {
+      question: "В каком году началась Первая мировая война?",
+      options: ["1905", "1914", "1918", "1939"],
+      correct: 1,
+      explanation: "Первая мировая война началась в 1914 году и завершилась в 1918 году."
+    },
+    {
+      question: "Что обозначает буква «П» в аббревиатуре ПК?",
+      options: ["Профессиональный", "Портативный", "Персональный", "Программный"],
+      correct: 2,
+      explanation: "ПК — Персональный Компьютер. Слово «персональный» означает, что компьютер предназначен для одного пользователя."
+    }
+  ];
+
+  const letters = ['А', 'Б', 'В', 'Г'];
+  let current = 0;
+  let score = 0;
+  let answered = false;
+
+  function loadQuestion() {
+    const q = questions[current];
+    answered = false;
+
+    document.getElementById('counter').textContent = `Вопрос ${current + 1} из ${questions.length}`;
+    document.getElementById('progressFill').style.width = `${((current + 1) / questions.length) * 100}%`;
+    document.getElementById('questionText').textContent = q.question;
+
+    const feedback = document.getElementById('feedback');
+    feedback.className = 'feedback';
+    feedback.textContent = '';
+
+    document.getElementById('nextBtn').className = 'next-btn';
+
+    const optionsEl = document.getElementById('options');
+    optionsEl.innerHTML = '';
+
+    q.options.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.innerHTML = `<span class="letter">${letters[i]}</span>${opt}`;
+      btn.onclick = () => selectAnswer(i);
+      optionsEl.appendChild(btn);
+    });
+  }
+
+  function selectAnswer(index) {
+    if (answered) return;
+    answered = true;
+
+    const q = questions[current];
+    const buttons = document.querySelectorAll('.option-btn');
+    const feedback = document.getElementById('feedback');
+
+    buttons.forEach(btn => btn.disabled = true);
+
+    if (index === q.correct) {
+      buttons[index].classList.add('correct');
+      feedback.textContent = '✅ Правильно! ' + q.explanation;
+      feedback.className = 'feedback correct-msg show';
+      score++;
+    } else {
+      buttons[index].classList.add('wrong');
+      buttons[q.correct].classList.add('correct');
+      feedback.textContent = '❌ Неправильно. ' + q.explanation;
+      feedback.className = 'feedback wrong-msg show';
+    }
+
+    const isLast = current === questions.length - 1;
+    const nextBtn = document.getElementById('nextBtn');
+    nextBtn.textContent = isLast ? 'Посмотреть результат 🏆' : 'Следующий вопрос →';
+    nextBtn.className = 'next-btn show';
+  }
+
+  function nextQuestion() {
+    current++;
+    if (current < questions.length) {
+      loadQuestion();
+    } else {
+      showResult();
+    }
+  }
+
+  function showResult() {
+    document.getElementById('quizScreen').style.display = 'none';
+    const result = document.getElementById('resultScreen');
+    result.className = 'result show';
+
+    const pct = score / questions.length;
+    let emoji, title, sub;
+
+    if (pct === 1)       { emoji = '🏆'; title = 'Отлично!';       sub = 'Ты настоящий знаток!'; }
+    else if (pct >= 0.6) { emoji = '🎉'; title = 'Хороший результат!'; sub = 'Ещё немного — и будет идеально!'; }
+    else if (pct >= 0.4) { emoji = '📚'; title = 'Неплохо!';        sub = 'Стоит повторить материал.'; }
+    else                 { emoji = '💪'; title = 'Не сдавайся!';    sub = 'Попробуй ещё раз — всё получится!'; }
+
+    document.getElementById('resultEmoji').textContent = emoji;
+    document.getElementById('resultTitle').textContent = title;
+    document.getElementById('resultScore').textContent = `${score} / ${questions.length}`;
+    document.getElementById('resultSub').textContent = sub;
+  }
+
+  function restart() {
+    current = 0;
+    score = 0;
+    document.getElementById('quizScreen').style.display = 'block';
+    document.getElementById('resultScreen').className = 'result';
+    loadQuestion();
+  }
+
+  loadQuestion();
+</script>
+
+</body>
+</html>
